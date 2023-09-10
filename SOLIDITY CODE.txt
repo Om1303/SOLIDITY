@@ -1,0 +1,96 @@
+//SPDX-License-Identifier: Unlicensed
+
+pragma solidity 0.8.21;
+
+contract KidsFunds {
+    // owner 
+    
+    address owner;
+
+    constructor() {
+        owner = msg.sender;    // to retrieve the the address of current account interacting with the smart contract.
+    }
+    
+/*payable :  this means that it also accepts a payment of zero Ether, so it also is non-payable.
+On the hand, the non-payable func. rejects the ether sent to it.*/
+
+//define Kid
+    struct Kid {
+        address payable walletAddress;
+        string firstName;
+        string lastName;
+        uint releaseTime;
+        uint amount;
+        bool canWithdraw;
+    }
+
+    Kid[] public kids;
+
+/*adress : Holds a 20 byte value (size of an Ethereum address)*/
+/address payable : same as address, but with additional member Transfer or Send/
+
+//add kid to contract
+    function addKid(address payable walletAddress, string memory firstName, string memory lastName, uint releaseTime, uint amount, bool canWithdraw) public {
+            kids.push(Kid(
+                walletAddress,
+                firstName,
+                lastName,
+                releaseTime,
+                amount,
+                canWithdraw 
+            ));
+        }
+
+    function balanceof() public view returns(uint) {
+        return address(this).balance;                    //to get the contract balance
+    } 
+
+
+
+//deposit funds to contract, specifically to a kids's account
+    function deposit(address walletAddress) payable public {
+        addToKidsBalance(walletAddress);
+    } 
+
+    function addToKidsBalance(address walletAddress) private {
+        for(uint i=0;i<kids.length;i++) {
+            if(kids[i].walletAddress == walletAddress) {
+                kids[i].amount += msg.value;   /*msg.value->the amt of ether provided to this contract to wei,
+                                                the func. should be markded payable*/
+            }
+        }
+    }   
+
+//view : the view keyword will not modify the stare of contract
+
+    function getIndex(address walletAddress) view private returns(uint) {
+        for(uint i=0; i<kids.length;i++) {
+            if(kids[i].walletAddress == walletAddress) {
+                return i;
+            }
+        }
+        return 0; 
+    } 
+
+
+/*block.timestamp : The blocks.timestamp is a Unix time stamp. 
+So, it has the complete information about the date, hours, minutes, and seconds (in UTC) when the block was created.*/
+
+//kid check if able to withdraw
+    function availableToWithdraw(address walletAddress) public returns(bool) {
+        uint i = getIndex(walletAddress);
+        if(block.timestamp > kids[i].releaseTime) {
+            kids[i].canWithdraw = true;
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
+
+//withdraw money
+    function withdraw(address payable walletAddress) payable public {
+        uint i = getIndex(walletAddress);
+        kids[i].walletAddress.transfer(kids[i].amount);
+    }
+}
